@@ -14,36 +14,39 @@
 
 using namespace std;
 
-using ll = long long;
 using graph = vector<vector<int>>;
 
-const ll MOD = 1e9 + 7;
+const int MOD = 1e9 + 7;
 
-ll solve(const graph& g)
+int solve(const graph& g)
 {
     int n = g.size();
-    ll max_mask = (1ULL << n);
+    int max_mask = (1ULL << n);
 
-    vector<vector<ll>> dp(n, vector<ll>(max_mask));
-    dp[0][1] = 1;
+    vector<vector<int>> dp(max_mask, vector<int>(n));
+    dp[1][0] = 1;
 
-    for (ll mask = 1; mask < max_mask; ++mask) {
+    for (int mask = 1; mask < max_mask; ++mask) {
         for (int last = 0; last < n; ++last) {
             if (!(mask & (1ULL << last)))
                 continue;
 
+            if (dp[mask][last] == 0)
+                continue;
+
             for (int to: g[last]) {
-                ll next_mask = (mask | (1ULL << to));
+                int next_mask = (mask | (1ULL << to));
 
                 if (mask == next_mask)
                     continue;
 
-                dp[to][next_mask] = (dp[to][next_mask] + dp[last][mask]) % MOD;
+                dp[next_mask][to] += dp[mask][last];
+                dp[next_mask][to] %= MOD;
             }
         }
     }
 
-    return dp[n - 1][max_mask - 1];
+    return dp[max_mask - 1][n - 1];
 }
 
 int main()
