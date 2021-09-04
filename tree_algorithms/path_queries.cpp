@@ -19,7 +19,7 @@ using tree = vector<vector<int>>;
 
 class sum_segment_tree {
 public:
-    sum_segment_tree(const vector<int>& v):
+    sum_segment_tree(const vector<ll>& v):
         n_(v.size()),
         tree_(4 * n_)
     {
@@ -31,13 +31,13 @@ public:
         return find_sum(0, 0, n_ - 1, l, r);
     }
 
-    void assign(int pos, ll val)
+    void add(int pos, ll val)
     {
-        assign(0, 0, n_ - 1, pos, val);
+        add(0, 0, n_ - 1, pos, val);
     }
 
 private:
-    void build(const vector<int>& v, int x, int l, int r)
+    void build(const vector<ll>& v, int x, int l, int r)
     {
         if (l == r) {
             tree_[x] = v[l];
@@ -65,18 +65,18 @@ private:
         return a + b;
     }
 
-    void assign(int x, int tree_l, int tree_r, int pos, ll val)
+    void add(int x, int tree_l, int tree_r, int pos, ll val)
     {
         if (tree_l == tree_r) {
-            tree_[x] = val;
+            tree_[x] += val;
             return;
         }
 
         int m = (tree_l + tree_r) / 2;
         if (pos <= m)
-            assign(2 * x + 1, tree_l, m, pos, val);
+            add(2 * x + 1, tree_l, m, pos, val);
         else
-            assign(2 * x + 2, m + 1, tree_r, pos, val);
+            add(2 * x + 2, m + 1, tree_r, pos, val);
 
         tree_[x] = tree_[2 * x + 1] + tree_[2 * x + 2];
     }
@@ -86,42 +86,56 @@ private:
     vector<ll> tree_;
 };
 
-class sum_subtree {
+class path {
 public:
-    sum_subtree(const tree& t, vector<int>& values):
-        index_(t.size())
+    path(const tree& t, const vector<ll>& values):
+        index_(t.size()),
+        values_(values)
     {
-        vector<int> ordered_values;
-        dfs(t, values, 0, -1, ordered_values);
-        values_ = make_unique<sum_segment_tree>(ordered_values);
-    }
+        vector<ll> sums;
+        dfs(t, values, 0, -1, 0, sums);
 
-    void assign(int node, ll val)
-    {
-        int pos = index_[node];
-        values_->assign(pos, val);
+        const int n = t.size();
+
+        vector<ll> deltas(n);
+        deltas[0] = sums[0];
+        for (int i = 1; i < n; ++i)
+            deltas[i] = sums[i] - sums[i - 1];
+
+        sums_ = make_unique<sum_segment_tree>(deltas);
     }
 
     ll find_sum(int node) const
     {
+        const int pos = index_[node];
+        return sums_->find_sum(0, pos);
+    }
+
+    void assign(int node, ll val)
+    {
+        const ll delta = val - values_[node];
+        values_[node] = val;
         int pos = index_[node];
-        return values_->find_sum(pos, pos + subtree_[pos] - 1);
+        sums_->add(pos, delta);
+        size_t end = pos + subtree_[pos] - 1;
+        if (end + 1 < index_.size())
+            sums_->add(end + 1, -delta);
     }
 
 private:
-    int dfs(const tree& t, const vector<int>& values, int x, int p,
-            vector<int>& ordered_values)
+    int dfs(const tree& t, const vector<ll>& values, int x, int p,
+            ll sum, vector<ll>& sums)
     {
-        const size_t pos = order_.size();
+        int pos = order_.size();
         index_[x] = pos;
         order_.push_back(x);
         subtree_.push_back(1);
-        ordered_values.push_back(values[x]);
+        sums.push_back(sum + values[x]);
 
         for (int child: t[x]) {
             if (child == p)
                 continue;
-            subtree_[pos] += dfs(t, values, child, x, ordered_values);
+            subtree_[pos] += dfs(t, values, child, x, sum + values[x], sums);
         }
 
         return subtree_[pos];
@@ -129,9 +143,10 @@ private:
 
 private:
     vector<int> index_;
+    vector<ll> values_;
     vector<int> order_;
     vector<int> subtree_;
-    unique_ptr<sum_segment_tree> values_;
+    unique_ptr<sum_segment_tree> sums_;
 };
 
 enum Query {
@@ -144,9 +159,9 @@ int main()
     int n, q;
     cin >> n >> q;
 
-    vector<int> values(n);
+    vector<ll> values(n);
     for (int i = 0; i < n; ++i)
-        cin >> values[i];
+        cin >> values[i];   
 
     tree t(n);
     for (int i = 0; i < n - 1; ++i) {
@@ -157,21 +172,21 @@ int main()
         t[b].push_back(a);
     }
 
-    sum_subtree s(t, values);
+    path p(t, values);
 
     while (q--) {
         int qt = 0;
         cin >> qt;
         if (qt == Query::ASSIGN) {
-            int node, x;
-            cin >> node >> x;
+            int node, val;
+            cin >> node >> val;
             --node;
-            s.assign(node, x);
+            p.assign(node, val);
         } else if (qt == Query::SUM) {
             int node;
             cin >> node;
             --node;
-            cout << s.find_sum(node) << '\n';
+            cout << p.find_sum(node) << '\n';
         }
     }
 
