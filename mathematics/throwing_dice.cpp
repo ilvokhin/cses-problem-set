@@ -42,7 +42,7 @@ matrix mul_mod(const matrix& a, const matrix& b) {
 }
 
 matrix binpow(const matrix& a, ll n) {
-    assert(n >= 0);
+    assert(n > 0);
 
     if (n == 1) {
         return a;
