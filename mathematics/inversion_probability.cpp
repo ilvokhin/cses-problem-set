@@ -30,11 +30,9 @@ int main()
     for (int i = 0; i < n; ++i) {
         for (int val = 1; val < r[i] + 1; ++val) {
             for (int j = i + 1; j < n; ++j) {
-                ld P = 0.0;
-                if (r[j] < val) {
-                    P = 1.0 / r[i];
-                } else {
-                    P = (1.0 / r[i]) * (val - 1) / r[j];
+                ld P = 1.0 / r[i];
+                if(r[j] >= val) {
+                    P *= 1.0 * (val - 1) / r[j];
                 }
                 e += P;
             }
